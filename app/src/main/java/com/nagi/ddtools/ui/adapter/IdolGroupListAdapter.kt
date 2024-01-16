@@ -1,14 +1,15 @@
 package com.nagi.ddtools.ui.adapter
 
-import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.JsonParser
 import com.nagi.ddtools.R
 import com.nagi.ddtools.database.idolGroupList.IdolGroupList
 import com.nagi.ddtools.databinding.ListIdolGroupViewBinding
+import com.nagi.ddtools.utils.UiUtils.openUrl
 
 class IdolGroupListAdapter(
     private var dataList: MutableList<IdolGroupList>
@@ -37,6 +38,21 @@ class IdolGroupListAdapter(
             }
             itemView.setOnClickListener {
                 binding.idolGroupInfo.text = item.group_desc
+            }
+            if (item.ext.isNotEmpty()) {
+                val extAsJson = JsonParser.parseString(item.ext).asJsonObject
+                if (extAsJson.has("weibo")) {
+                    if (extAsJson["weibo"].asString.isNotEmpty()){
+                        binding.jumpWeibo.visibility = View.VISIBLE
+                        binding.jumpWeibo.setOnClickListener { openUrl(extAsJson["weibo"].asString, binding.root.context) }
+                    }
+                }
+                if (extAsJson.has("bili")) {
+                    if (extAsJson["bili"].asString.isNotEmpty()){
+                        binding.jumpBili.visibility = View.VISIBLE
+                        binding.jumpBili.setOnClickListener { openUrl(extAsJson["bili"].asString, binding.root.context) }
+                    }
+                }
             }
         }
     }

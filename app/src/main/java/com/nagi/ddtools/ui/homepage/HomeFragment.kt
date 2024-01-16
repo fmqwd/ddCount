@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -32,27 +31,23 @@ import kotlinx.coroutines.launch
 class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding ?: throw IllegalStateException("Binding error")
-
     private val adapter: HomePageListAdapter by lazy {
         HomePageListAdapter(mutableListOf()) { position ->
             showDeleteDialog(position)
         }
     }
-
     private val viewModel: HomeViewModel by viewModels()
-
-    private val resultLauncher: ActivityResultLauncher<Intent> by lazy {
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            handleActivityResult(result)
-        }
-    }
-
+    private lateinit var resultLauncher: ActivityResultLauncher<Intent>
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         bundle: Bundle?
     ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
+        resultLauncher =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                handleActivityResult(result)
+            }
         return binding.root
     }
 
