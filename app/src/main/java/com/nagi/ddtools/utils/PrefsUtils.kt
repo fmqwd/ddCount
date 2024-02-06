@@ -2,24 +2,19 @@ package com.nagi.ddtools.utils
 
 import android.content.Context
 import android.content.SharedPreferences
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.nagi.ddtools.utils.DataUtils.getCurrentDateString
 
 object PrefsUtils {
     private const val PREFS_NAME = "DdToolsPrefs"
     private const val KEY_FIRST_RUN = "firstRun"
     private const val KEY_LAST_RUN_DATE = "lastRunDate"
     private const val KEY_TOOL_TITLE = "toolTitle"
+    private const val USER_SETTINGS_LOCATION = "userSettingLocation"
 
     private fun getSharedPreferences(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    private fun getCurrentDateString(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        return dateFormat.format(Date())
-    }
 
     fun isFirstRun(context: Context): Boolean {
         return getSharedPreferences(context).getBoolean(KEY_FIRST_RUN, true)
@@ -47,5 +42,13 @@ object PrefsUtils {
     fun setToolTitle(context: Context, title: String) {
         getSharedPreferences(context).edit().putString(KEY_TOOL_TITLE, title).apply()
     }
+
+    fun setSettingLocation(context: Context, location: String) {
+        getSharedPreferences(context).edit().putString(USER_SETTINGS_LOCATION, location).apply()
+    }
+    fun getSettingLocation(context: Context): String? {
+        return getSharedPreferences(context).getString(USER_SETTINGS_LOCATION, "")
+    }
+
 }
 

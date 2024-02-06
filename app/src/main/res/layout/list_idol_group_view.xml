@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:padding="8dp">
 
-    <com.google.android.material.imageview.ShapeableImageView
+    <com.nagi.ddtools.ui.widget.NetImageView
         android:id="@+id/idol_group_img"
         android:layout_width="66dp"
         android:layout_height="66dp"
@@ -20,7 +20,7 @@
         android:layout_alignTop="@id/idol_group_img"
         android:layout_alignBottom="@id/idol_group_img"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="0dp"
+        android:layout_marginTop="@dimen/dp_0"
         android:layout_toEndOf="@id/idol_group_img"
         android:gravity="center_vertical"
         android:orientation="vertical"
@@ -28,12 +28,8 @@
 
         <TextView
             android:id="@+id/idol_group_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            style="@style/TitleTextStyle"
             android:layout_marginBottom="5dp"
-            android:textColor="@color/black"
-            android:textSize="18dp"
-            tools:ignore="SpUsage"
             tools:text="@string/title_home" />
 
         <LinearLayout
@@ -77,19 +73,19 @@
         android:orientation="horizontal">
 
         <com.google.android.material.imageview.ShapeableImageView
-            android:layout_width="33dp"
-            android:layout_height="33dp"
-            android:visibility="gone"
             android:id="@+id/jump_weibo"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
             android:layout_marginEnd="14dp"
-            android:src="@drawable/ic_weibo" />
+            android:src="@drawable/ic_weibo"
+            android:visibility="gone" />
 
         <com.google.android.material.imageview.ShapeableImageView
-            android:layout_width="33dp"
-            android:layout_height="33dp"
-            android:visibility="gone"
             android:id="@+id/jump_bili"
-            android:src="@drawable/ic_bili" />
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_bili"
+            android:visibility="gone" />
 
     </LinearLayout>
 

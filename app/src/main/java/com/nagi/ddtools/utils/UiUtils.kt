@@ -1,12 +1,14 @@
 package com.nagi.ddtools.utils
 
+import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import android.os.Looper
 import android.view.View
-import android.widget.EditText
+import android.widget.AutoCompleteTextView.OnDismissListener
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -27,6 +29,7 @@ import kotlinx.coroutines.withContext
 
 object UiUtils {
     private var currentToast: Toast? = null
+    private var currentDialog: AlertDialog? = null
     private var loadingDialog: Dialog? = null
     private var loadingJob: Job? = null
 
@@ -50,9 +53,12 @@ object UiUtils {
         negativeButtonText: String = "取消",
         onPositive: (() -> Unit)? = null,
         onNegative: (() -> Unit)? = null,
-        customView: View? = null
+        customView: View? = null,
+        onDismiss: (() -> Unit)? = null
     ) {
-        AlertDialog.Builder(this).apply {
+
+        currentDialog?.dismiss()
+        currentDialog = AlertDialog.Builder(this).apply {
             setTitle(title)
             setMessage(message)
             if (customView != null) {
@@ -60,21 +66,27 @@ object UiUtils {
             }
             setPositiveButton(positiveButtonText) { _, _ -> onPositive?.invoke() }
             setNegativeButton(negativeButtonText) { _, _ -> onNegative?.invoke() }
-        }.show()
+            setOnDismissListener {
+                onDismiss?.invoke()
+            }
+        }.create()
+        currentDialog?.show()
     }
 
     @Synchronized
     fun showLoading(context: Context) {
         hideLoading()
         loadingDialog = Dialog(context).apply {
-            setContentView(ProgressBar(context))
+            setContentView(ProgressBar(context).apply {
+                setTitle("加载中")
+            })
             setCancelable(false)
             window?.setBackgroundDrawableResource(android.R.color.transparent)
             show()
         }
         loadingJob = MainScope().launch {
             withContext(Dispatchers.Main) {
-                delay(10000)
+                delay(9000)
                 context.toast("加载超时，请检查网络或稍后再试。")
                 hideLoading()
             }
@@ -89,11 +101,36 @@ object UiUtils {
         loadingJob?.cancel()
     }
 
-    fun openUrl(url:String,context: Context){
+    @Synchronized
+    fun hideDialog() {
+        currentDialog?.dismiss()
+        currentDialog = null
+    }
+
+    fun Context.openUrl(url: String) {
         val uri = Uri.parse(url)
         val intent = Intent()
         intent.action = "android.intent.action.VIEW"
         intent.data = uri
-        context.startActivity(intent)
+        this.startActivity(intent)
+    }
+
+    fun openPage(
+        activity: Activity,
+        page: Class<*>,
+        needFinish: Boolean = false,
+        bundle: Bundle = Bundle()
+    ) {
+        val intent = Intent(activity, page)
+        intent.putExtras(bundle)
+        activity.startActivity(intent)
+        if (needFinish) activity.finish()
+    }
+
+    fun Context.copyToClipboard(text: String) {
+        val clipboardManager =
+            this.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clipData = android.content.ClipData.newPlainText("text", text)
+        clipboardManager.setPrimaryClip(clipData)
     }
 }

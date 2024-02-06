@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/dp_10"
+    android:layout_marginEnd="@dimen/dp_10">
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/linear_image"
+        android:layout_width="@dimen/dp_30"
+        android:layout_height="@dimen/dp_30"
+        android:layout_alignParentStart="true"
+        android:padding="@dimen/dp_2"
+        android:src="@drawable/ic_message_board"
+        app:contentPadding="5dp"
+        app:shapeAppearance="@style/homePageListImageStyle" />
+
+    <TextView
+        android:id="@+id/linear_text"
+        style="@style/TextBigStyle"
+        android:layout_height="@dimen/dp_30"
+        android:layout_marginStart="@dimen/dp_10"
+        android:layout_toStartOf="@+id/linear_image_bottom"
+        android:layout_toEndOf="@+id/linear_image"
+        android:gravity="start|center"
+        android:text="@string/all_selected" />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/linear_image_bottom"
+        android:layout_width="@dimen/dp_20"
+        android:layout_height="@dimen/dp_20"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:adjustViewBounds="true"
+        android:src="@drawable/baseline_arrow_forward"
+        app:shapeAppearance="@style/circleStyle" />
+</RelativeLayout>

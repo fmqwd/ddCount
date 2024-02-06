@@ -21,7 +21,7 @@ android {
         minSdk = 29
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.1"
     }
 
     buildFeatures {
@@ -64,7 +64,9 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
+    //noinspection GradleDependency
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+    //noinspection GradleDependency
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.2")
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.6")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
@@ -78,5 +80,7 @@ dependencies {
     //json解析库
     implementation("com.google.code.gson:gson:2.9.0")
     // OkHttp
-    implementation ("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    //标签的交叉样式
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
 }

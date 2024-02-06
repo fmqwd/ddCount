@@ -45,3 +45,11 @@
      <fields>;
      <init>(...);
  }
+ -keep class com.nagi.ddtools.data.TagsList {
+      <fields>;
+      <init>(...);
+  }
+ -keep class com.nagi.ddtools.data.MediaList {
+      <fields>;
+      <init>(...);
+  }
