@@ -2,21 +2,32 @@ package com.nagi.ddtools.utils
 
 import android.Manifest
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.PopupWindow
 import androidx.activity.result.ActivityResultLauncher
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.setPadding
+import com.nagi.ddtools.R
 import com.nagi.ddtools.data.ProgressListener
+import com.nagi.ddtools.databinding.DialogImageShowBinding
 import com.nagi.ddtools.utils.UiUtils.toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -33,6 +44,7 @@ import java.util.zip.ZipInputStream
  * @date :2023/12/27 23:01
  */
 object FileUtils {
+    const val IDOL_LIST_FILE = "/data/idolList.json"
     const val IDOL_GROUP_FILE = "/data/idolGroupList.json"
     const val ACTIVITY_LIS_FILE = "/data/activityList.json"
     private const val TAG = "FileUtils"
@@ -218,7 +230,7 @@ object FileUtils {
      * @param fileOrDirectory 指定的文件
      * @return 是否成功
      */
-    fun deleteRecursively(fileOrDirectory: File): Boolean {
+    private fun deleteRecursively(fileOrDirectory: File): Boolean {
         if (fileOrDirectory.isDirectory) {
             val files = fileOrDirectory.listFiles()
             if (files != null) {
@@ -286,6 +298,50 @@ object FileUtils {
         return true
     }
 
+    /**
+     * 查看大图
+     */
+    fun viewBigImage(context: Context, view: View, bmp: Bitmap?) {
+        context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val popupViewBinding = DialogImageShowBinding.inflate(LayoutInflater.from(context))
+        val popupWindow = PopupWindow(
+            popupViewBinding.root,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            true
+        )
+        popupViewBinding.popupImageView.setPadding(50)
+        bmp?.let { bit ->
+            popupViewBinding.popupImageView.setImageBitmap(bit)
+        } ?: run {
+            popupViewBinding.popupImageView.setImageResource(R.drawable.baseline_user_unlogin)
+        }
+        popupViewBinding.root.setOnClickListener {
+            popupWindow.dismiss()
+        }
+        popupViewBinding.popupImageView.setOnLongClickListener {
+            saveImageToGallery(context, bmp)
+            true
+        }
+        popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0)
+    }
+
+    fun getDrawableForMedia(context: Context, type: String): Drawable? {
+        return ContextCompat.getDrawable(
+            context, when (type) {
+                "weibo" -> R.drawable.ic_weibo
+                "xiaohongshu" -> R.drawable.ic_xiaohongshu
+                "douyin" -> R.drawable.ic_douyin
+                "X" -> R.drawable.ic_twitter
+                "qq" -> R.drawable.ic_qq
+                "bili" -> R.drawable.ic_bili
+                "youtube" -> R.drawable.ic_youtube
+                else -> R.drawable.ic_weibo
+            }
+        )
+    }
+
+
     @Throws(IOException::class)
     private fun createFileForZipEntry(outputFolderPath: String, zipEntry: ZipEntry): File {
         val outputFile = File(outputFolderPath, zipEntry.name)
@@ -311,5 +367,45 @@ object FileUtils {
         val extension = originalFileName.substringAfterLast('.', "png")
         val timestamp = System.currentTimeMillis()
         return "IMG_$timestamp.$extension"
+    }
+
+    private fun getFileNameWithTimestamp(): String {
+        val timestamp = System.currentTimeMillis()
+        return "IMG_$timestamp.jpg"
+    }
+
+    private fun saveImageToGallery(context: Context, bitmap: Bitmap?) {
+        if (bitmap == null) {
+            context.toast("保存失败：图片为空")
+            return
+        }
+
+        val filename = getFileNameWithTimestamp()
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename) // 文件名
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES) // 相对路径
+
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        uri?.let {
+            try {
+                resolver.openOutputStream(uri).use { out ->
+                    if (out != null) {
+                        if (bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)) {
+                            context.toast("已保存至相册")
+                        } else {
+                            context.toast("保存失败")
+                        }
+                    }
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+                context.toast("保存失败")
+            }
+        } ?: run {
+            context.toast("保存失败")
+        }
     }
 }

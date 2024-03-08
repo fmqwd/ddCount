@@ -27,6 +27,7 @@
             android:textColor="@color/lty"
             android:textSize="@dimen/dp_25"
             android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/title_include"
             tools:ignore="SpUsage"
@@ -46,6 +47,16 @@
             app:layout_constraintStart_toEndOf="@id/details_date"
             app:layout_constraintTop_toTopOf="@id/details_date"
             tools:text="2023-12-25" />
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/details_collect"
+            android:layout_width="33dp"
+            android:layout_height="33dp"
+            android:layout_marginEnd="@dimen/dp_20"
+            android:src="@drawable/baseline_un_collect"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/details_date_text" />
 
         <TextView
             android:id="@+id/details_location"
@@ -84,12 +95,44 @@
             tools:text="12:00-14:00" />
 
         <TextView
+            android:id="@+id/details_price"
+            style="@style/TitleTextStyle"
+            android:layout_marginTop="@dimen/dp_10"
+            android:text="票价："
+            app:layout_constraintStart_toStartOf="@id/details_time"
+            app:layout_constraintTop_toBottomOf="@id/details_time_text" />
+
+        <TextView
+            android:id="@+id/details_price_text"
+            style="@style/TitleTextStyle"
+            app:layout_constraintStart_toEndOf="@id/details_price"
+            app:layout_constraintTop_toTopOf="@id/details_price"
+            tools:text="100-200" />
+
+        <TextView
+            android:id="@+id/details_desc"
+            style="@style/TitleTextStyle"
+            android:layout_marginTop="@dimen/dp_10"
+            android:text="介绍："
+            app:layout_constraintStart_toStartOf="@id/details_price"
+            app:layout_constraintTop_toBottomOf="@id/details_price" />
+
+        <TextView
+            android:id="@+id/details_desc_text"
+            style="@style/TitleTextStyle"
+            android:layout_width="@dimen/dp_0"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/details_desc"
+            app:layout_constraintTop_toTopOf="@id/details_desc"
+            tools:text="这场是XXXXX" />
+
+        <TextView
             android:id="@+id/details_group"
             style="@style/TitleTextStyle"
             android:layout_marginTop="10dp"
             android:text="参演团体："
-            app:layout_constraintStart_toStartOf="@+id/details_time"
-            app:layout_constraintTop_toBottomOf="@+id/details_time_text" />
+            app:layout_constraintStart_toStartOf="@+id/details_desc"
+            app:layout_constraintTop_toBottomOf="@+id/details_desc_text" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/details_group_list"
@@ -141,6 +184,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/dp_10"
+            android:layout_marginBottom="@dimen/dp_50"
             android:nestedScrollingEnabled="false"
             android:visibility="gone"
             app:layoutManager="com.google.android.flexbox.FlexboxLayoutManager"

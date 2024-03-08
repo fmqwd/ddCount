@@ -10,18 +10,20 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
-import com.nagi.ddtools.R
 import com.nagi.ddtools.data.MediaList
 import com.nagi.ddtools.database.idolGroupList.IdolGroupList
 import com.nagi.ddtools.databinding.ListIdolGroupViewBinding
-import com.nagi.ddtools.ui.toolpage.tools.idolsearch.details.IdolDetailsActivity
+import com.nagi.ddtools.ui.toolpage.tools.idolsearch.details.IdolGroupDetailsActivity
 import com.nagi.ddtools.utils.UiUtils.openPage
 import com.nagi.ddtools.utils.UiUtils.openUrl
 
 class IdolGroupListAdapter(
-    private var dataList: MutableList<IdolGroupList>
+    private var dataList: MutableList<IdolGroupList>,
+    private val onClickListener: ((Int, IdolGroupList) -> Unit)? = null
 ) : RecyclerView.Adapter<IdolGroupListAdapter.ViewHolder>() {
     var swipeToDeleteEnabled = false
+    var isShowEditTime = false
+    var isShowTimeTable = false
     fun updateData(newData: List<IdolGroupList>) {
         val diffCallback = IdolGroupListDiffCallback(dataList, newData)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
@@ -31,59 +33,63 @@ class IdolGroupListAdapter(
         diffResult.dispatchUpdatesTo(this)
     }
 
+    fun editDesc(position: Int, data: IdolGroupList) {
+        dataList[position] = data
+        notifyItemChanged(position)
+    }
+
     fun removeAt(position: Int) {
         dataList.removeAt(position)
         notifyItemRemoved(position)
     }
 
-    class ViewHolder(private val binding: ListIdolGroupViewBinding) :
+    class ViewHolder(
+        private val binding: ListIdolGroupViewBinding,
+        private val isEditTime: Boolean,
+        private val isShowTimeTable: Boolean
+    ) :
         RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: IdolGroupList) {
-            binding.idolGroupImg.setImageUrl(item.imgUrl,false)
+        fun bind(item: IdolGroupList, onClickListener: ((Int, IdolGroupList) -> Unit)? = null) {
+            binding.idolGroupImg.setImageUrl(item.imgUrl, false)
             binding.idolGroupName.text = item.name
             binding.idolGroupLocation.text = item.location
-            binding.idolGroupLocation.text = item.location
-            if (item.groupDesc.isEmpty()) {
-                binding.idolGroupInfo.visibility = View.GONE
-            } else {
+            binding.idolGroupInfo.visibility = View.GONE
+
+            if (isEditTime) {
+                binding.idolGroupInfo.visibility = View.VISIBLE
+                binding.idolGroupInfo.text = item.groupDesc.ifEmpty { "点我编辑时间" }
+            }
+            if (isShowTimeTable && item.groupDesc.isNotEmpty()) {
                 binding.idolGroupInfo.visibility = View.VISIBLE
                 binding.idolGroupInfo.text = item.groupDesc
             }
             itemView.setOnClickListener {
-                openPage(
+                if (isEditTime) onClickListener?.let { it(adapterPosition, item) }
+                else openPage(
                     binding.root.context as Activity,
-                    IdolDetailsActivity::class.java,
+                    IdolGroupDetailsActivity::class.java,
                     false,
-                    Bundle().apply {
-                        putInt("id", item.id)
-                    })
+                    Bundle().apply { putInt("id", item.id) })
             }
             if (item.ext.isNotEmpty()) {
-                val mediaResult: MutableList<MediaList>
                 val extAsJson = JsonParser.parseString(item.ext).asJsonObject
-                if (extAsJson.has("media")) {
-                    val mediaList = extAsJson.get("media").asJsonArray
+                extAsJson.takeIf { it.has("media") }?.get("media")?.asJsonArray?.let { mediaList ->
                     val itemType = object : TypeToken<List<MediaList>>() {}.type
-                    mediaResult = Gson().fromJson(mediaList, itemType)
-                    for (media in mediaResult) {
-                        if (media.type == "weibo") {
-                            binding.jumpWeibo.visibility = View.VISIBLE
-                            binding.jumpWeibo.setOnClickListener {
-                                binding.root.context.openUrl(
-                                    media.url
-                                )
+                    val mediaResult: List<MediaList> = Gson().fromJson(mediaList, itemType)
+                    mediaResult.forEach { media ->
+                        when (media.type) {
+                            "weibo" -> binding.jumpWeibo.apply {
+                                visibility = View.VISIBLE
+                                setOnClickListener { binding.root.context.openUrl(media.url) }
                             }
-                        }
-                        if (media.type == "bili") {
-                            binding.jumpWeibo.visibility = View.VISIBLE
-                            binding.jumpWeibo.setOnClickListener {
-                                binding.root.context.openUrl(
-                                    media.url
-                                )
+
+                            "bili" -> binding.jumpBili.apply {
+                                visibility = View.VISIBLE
+                                setOnClickListener { binding.root.context.openUrl(media.url) }
                             }
+
                         }
                     }
-
                 }
             }
         }
@@ -92,11 +98,11 @@ class IdolGroupListAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding =
             ListIdolGroupViewBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return ViewHolder(binding)
+        return ViewHolder(binding, isShowEditTime, isShowTimeTable)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(dataList[position])
+        holder.bind(dataList[position], onClickListener)
     }
 
     override fun getItemCount(): Int = dataList.size

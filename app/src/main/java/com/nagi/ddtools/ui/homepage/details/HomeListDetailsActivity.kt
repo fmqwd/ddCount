@@ -38,7 +38,10 @@ class HomeListDetailsActivity : DdToolsBindingBaseActivity<ActivityHomeListDetai
             showDeleteDialog(position, data)
         }
     }
-
+    override fun onResume() {
+        super.onResume()
+        viewModel.loadHomePageList()
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         resultLauncher =
@@ -79,7 +82,7 @@ class HomeListDetailsActivity : DdToolsBindingBaseActivity<ActivityHomeListDetai
             val data = homePageList.filter { it.parent == id }
             detailsTitle.text = currentData.name
             detailsInfoText.text = currentData.info
-            detailsInfoText.text = if (data.isNotEmpty()) "当前共${data.size}条" else ""
+            detailsInclude.text = if (data.isNotEmpty()) "当前共${data.size}条" else ""
             adapter.updateData(data)
         }
     }

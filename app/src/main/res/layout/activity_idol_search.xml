@@ -67,12 +67,10 @@
         app:layout_constraintEnd_toStartOf="@+id/search_switch_search"
         app:layout_constraintTop_toTopOf="@+id/search_switch_search" />
 
-    <androidx.appcompat.widget.SwitchCompat
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/search_switch_search"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@null"
-        android:checked="false"
         android:textColor="@color/lty"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -96,6 +94,18 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/search_switch_search"
         tools:listitem="@layout/list_idol_group_view" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/search_add"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="@dimen/dp_20"
+        android:clickable="true"
+        android:src="@drawable/baseline_edit"
+        app:layout_constraintBottom_toTopOf="@id/search_research"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:ignore="ContentDescription" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/search_research"

@@ -13,8 +13,11 @@ import com.nagi.ddtools.database.activityList.ActivityList
 import com.nagi.ddtools.database.activityList.ActivityListDao
 import com.nagi.ddtools.database.idolGroupList.IdolGroupList
 import com.nagi.ddtools.database.idolGroupList.IdolGroupListDao
+import com.nagi.ddtools.database.localCollect.LocalCollect
+import com.nagi.ddtools.database.localCollect.LocalCollectDao
 import com.nagi.ddtools.database.user.User
 import com.nagi.ddtools.resourceGet.NetGet
+import com.nagi.ddtools.utils.DataUtils
 import com.nagi.ddtools.utils.LogUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,6 +37,9 @@ open class ActivityDetailsViewModel : ViewModel() {
     private val _groupList = MutableLiveData<List<IdolGroupList>>()
     val groupList: LiveData<List<IdolGroupList>> = _groupList
 
+    private val _isCollection = MutableLiveData<Boolean>()
+    val isCollection: LiveData<Boolean> = _isCollection
+
     private val activityListDao: ActivityListDao by lazy {
         AppDatabase.getInstance().activityListDao()
     }
@@ -41,20 +47,56 @@ open class ActivityDetailsViewModel : ViewModel() {
         AppDatabase.getInstance().idolGroupListDao()
     }
 
+    private val collectDao: LocalCollectDao by lazy {
+        AppDatabase.getInstance().localCollectDao()
+    }
+
     fun setId(id: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val activityList = activityListDao.getById("$id")
                 _data.postValue(activityList)
+                setGroupList(activityList.participatingGroup)
+                getCollect(activityList.id)
+            }
+        }
+    }
+
+    fun setGroupList(groupString: String?) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
                 val resultList = mutableListOf<IdolGroupList>()
-                val groupIdListString = activityList.participatingGroup
-                val groupIdList = groupIdListString?.split(",")
+                val groupIdList = groupString?.split(",")
                 for (groupInfo in groupIdList ?: emptyList()) {
                     val groupId = groupInfo.split("-")[0]
                     groupListDao.getById(groupId.toInt()).let { group ->
-                        resultList.add(group)
+                        resultList.add(
+                            group.copy(groupDesc = getTimeTable(groupInfo, groupId.toInt()))
+                        )
                     }
                     _groupList.postValue(resultList)
+                }
+            }
+        }
+    }
+
+    private fun getCollect(id: Int) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                _isCollection.postValue(collectDao.getByTypeAndId("activity", id).isNotEmpty())
+            }
+        }
+    }
+
+    fun setCollect(collect: LocalCollect) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                if (collectDao.getByTypeAndId("activity", collect.collectId).isNotEmpty()) {
+                    collectDao.deleteByTypeAndId("activity", collect.collectId)
+                    _isCollection.postValue(false)
+                } else {
+                    collectDao.insertCollect(collect)
+                    _isCollection.postValue(true)
                 }
             }
         }
@@ -104,4 +146,23 @@ open class ActivityDetailsViewModel : ViewModel() {
         }
     }
 
+    private fun getTimeTable(data: String, groupId: Int): String {
+        val groupTimeData = DataUtils.getGroupTime(getThisPart(data, groupId))
+        if (groupTimeData.size == 4) {
+            groupTimeData.removeAt(0)
+            val timeRange = "${DataUtils.trimSecondsFromTime(groupTimeData[0])}-${
+                DataUtils.trimSecondsFromTime(groupTimeData[1])
+            }"
+            val parts = groupTimeData[2].split(":")
+            val partsMinutes = parts[0].toInt() * 60 + parts[1].toInt()
+            val durationString = "(${partsMinutes}min)"
+            return "$timeRange$durationString"
+        }
+        return ""
+    }
+
+    private fun getThisPart(data: String, groupId: Int): String =
+        data.split(",")
+            .find { it.contains(groupId.toString()) }
+            .orEmpty()
 }

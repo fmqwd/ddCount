@@ -12,8 +12,10 @@ import com.nagi.ddtools.database.user.User
 import com.nagi.ddtools.databinding.FragmentMineBinding
 import com.nagi.ddtools.ui.minepage.about.AboutActivity
 import com.nagi.ddtools.ui.minepage.feedback.UserFeedBack
+import com.nagi.ddtools.ui.minepage.join.JoinUsActivity
 import com.nagi.ddtools.ui.minepage.setting.GlobalSettingActivity
 import com.nagi.ddtools.ui.minepage.user.login.LoginActivity
+import com.nagi.ddtools.ui.minepage.user.userInfo.UserInfoActivity
 import com.nagi.ddtools.utils.UiUtils.openPage
 
 class MinePageFragment : Fragment() {
@@ -33,9 +35,7 @@ class MinePageFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initView()
-        viewModel.user.observe(viewLifecycleOwner) {
-            setUserStatus(it)
-        }
+        viewModel.user.observe(viewLifecycleOwner) { setUserStatus(it) }
     }
 
     override fun onResume() {
@@ -45,25 +45,29 @@ class MinePageFragment : Fragment() {
 
     private fun initView() {
         binding.apply {
+            mineLinearCollect.apply {
+                setData(R.drawable.ic_collections, "我的收藏", "red")
+            }
             mineLinearFeedback.apply {
-                setData(R.drawable.ic_feedback, "用户反馈", "red")
+                setData(R.drawable.ic_feedback, "用户反馈", "gray")
                 setOnClickListener(requireActivity(), UserFeedBack::class.java)
             }
             mineLinearJoinUs.apply {
-                setData(R.drawable.ic_join_us, "加入我们", "gray")
+                setData(R.drawable.ic_join_us, "加入我们", "blue")
+                setOnClickListener(requireActivity(), JoinUsActivity::class.java)
             }
             mineLinearSetting.apply {
-                setData(R.drawable.ic_mine_setting, "全局设置", "blue")
+                setData(R.drawable.ic_mine_setting, "全局设置", "lty")
                 setOnClickListener(requireActivity(), GlobalSettingActivity::class.java)
             }
             mineLinearAbout.apply {
-                setData(R.drawable.ic_about, "关于", "lty")
+                setData(R.drawable.ic_about, "关于", "green")
                 setOnClickListener(requireActivity(), AboutActivity::class.java)
             }
             loginViewImage.setOnClickListener {
-                if (viewModel.user.value.isNullOrEmpty()) {
-                    openPage(requireActivity(), LoginActivity::class.java)
-                }
+                if (viewModel.user.value.isNullOrEmpty()) openPage(
+                    requireActivity(), LoginActivity::class.java
+                ) else openPage(requireActivity(), UserInfoActivity::class.java)
             }
         }
     }
@@ -76,17 +80,14 @@ class MinePageFragment : Fragment() {
                     loginNickname.text = userInfo.nickname
                     loginUsername.text = "用户名：${userInfo.username}"
                     if (userInfo.avatar_url.isNotEmpty() && userInfo.avatar_url.isNotBlank()) {
+                        loginViewImage.onCLick(userInfo.avatar_url)
                         loginViewImage.setImageUrl(userInfo.avatar_url)
-                        loginViewImage.setOnClickListener {
-                                loginViewImage.onCLick(userInfo.avatar_url)
-                        }
                     }
                 }
             }
         } else {
-            binding.apply {
-                loginUsername.text = ""
-            }
+            binding.loginUsername.text = ""
+            binding.loginNickname.text = "点击头像去登录"
         }
     }
 

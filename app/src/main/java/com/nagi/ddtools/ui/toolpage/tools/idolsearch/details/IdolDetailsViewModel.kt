@@ -1,5 +1,6 @@
 package com.nagi.ddtools.ui.toolpage.tools.idolsearch.details
 
+import android.annotation.SuppressLint
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -11,10 +12,8 @@ import com.nagi.ddtools.data.MediaList
 import com.nagi.ddtools.data.Resource
 import com.nagi.ddtools.data.TagsList
 import com.nagi.ddtools.database.AppDatabase
-import com.nagi.ddtools.database.activityList.ActivityList
-import com.nagi.ddtools.database.activityList.ActivityListDao
 import com.nagi.ddtools.database.idolGroupList.IdolGroupList
-import com.nagi.ddtools.database.idolGroupList.IdolGroupListDao
+import com.nagi.ddtools.database.idolList.IdolList
 import com.nagi.ddtools.database.user.User
 import com.nagi.ddtools.resourceGet.NetGet
 import com.nagi.ddtools.utils.LogUtils
@@ -26,8 +25,8 @@ class IdolDetailsViewModel : ViewModel() {
     private val _users = MutableLiveData<User>()
     val users: LiveData<User> = _users
 
-    private val _data = MutableLiveData<IdolGroupList>()
-    val data: LiveData<IdolGroupList> = _data
+    private val _data = MutableLiveData<IdolList>()
+    val data: LiveData<IdolList> = _data
 
     private val _tags = MutableLiveData<List<TagsList>>()
     val tags: LiveData<List<TagsList>> = _tags
@@ -35,64 +34,51 @@ class IdolDetailsViewModel : ViewModel() {
     private val _medias = MutableLiveData<List<MediaList>>()
     val medias: LiveData<List<MediaList>> = _medias
 
-    private val _memberList = MutableLiveData<List<IdolGroupList>>()
-    val memberList: LiveData<List<IdolGroupList>> = _memberList
+    private val _group = MutableLiveData<IdolGroupList>()
+    val group: LiveData<IdolGroupList> = _group
 
-    private val _activityList = MutableLiveData<List<ActivityList>>()
-    val activityList: LiveData<List<ActivityList>> = _activityList
-
-    private val activityListDao: ActivityListDao by lazy {
-        AppDatabase.getInstance().activityListDao()
+    // 这里不知道为啥，postValue会报data不能为null，虽然已经给他在外面判断了，但是还是报。
+    // 而且他喵的我加!!还会告诉我没用，服啦，只能加个注解了(*_*)
+    @SuppressLint("NullSafeMutableLiveData")
+    fun setData(id: Int, dataGet:IdolList? =null) {
+        if (dataGet != null) {
+            loadGroup(dataGet.groupId)
+            loadMediaData(dataGet.ext)
+            _data.postValue(dataGet)
+        } else {
+            setDataById(id)
+        }
     }
-    private val groupListDao: IdolGroupListDao by lazy {
-        AppDatabase.getInstance().idolGroupListDao()
+
+    private fun setDataById(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val dataGet = AppDatabase.getInstance().idolListDao().getById(id)
+            setData(id,dataGet)
+            _data.postValue(dataGet)
+        }
     }
 
-    fun setId(id: Int) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                val detailsData = groupListDao.getById(id)
-                _data.postValue(detailsData)
-                val memberResult = mutableListOf<IdolGroupList>()
-                val memberResultString = detailsData.memberIds
-                if (!memberResultString.isNullOrEmpty()) {
-                    val memberResultList = memberResultString.split(",")
-                    for (memberId in memberResultList) {
-                        if (memberId.isNotEmpty()) {
-                            groupListDao.getById(memberId.toInt()).let { member ->
-                                memberResult.add(member)
-                            }
-                        }
+    private fun loadGroup(id:Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val groupData = AppDatabase.getInstance().idolGroupListDao().getById(id)
+            _group.postValue(groupData)
+        }
+    }
+
+    private fun loadMediaData(ext: String? = "") {
+        viewModelScope.launch(Dispatchers.IO) {
+            var mediaResult = mutableListOf<MediaList>()
+            if (!ext.isNullOrEmpty()) {
+                try {
+                    val mediaJson = JsonParser.parseString(ext).asJsonObject
+                    if (mediaJson.has("media")) {
+                        val mediaList = mediaJson.get("media").asJsonArray
+                        val itemType = object : TypeToken<List<MediaList>>() {}.type
+                        mediaResult = Gson().fromJson(mediaList, itemType)
                     }
-                    _memberList.postValue(memberResult)
-                }
-                val activityResult = mutableListOf<ActivityList>()
-                val activityIdListString = detailsData.activityIds
-                if (!activityIdListString.isNullOrEmpty()) {
-                    val activityIdList = activityIdListString.split(",")
-                    for (activityId in activityIdList) {
-                        if (activityId.isNotEmpty()) {
-                            activityListDao.getById(activityId).let { activity ->
-                                activityResult.add(activity)
-                            }
-                        }
-                    }
-                    _activityList.postValue(activityResult)
-                }
-                var mediaResult = mutableListOf<MediaList>()
-                val mediaJsonString = detailsData.ext
-                if (mediaJsonString.isNotEmpty()) {
-                    try {
-                        val mediaJson = JsonParser.parseString(detailsData.ext).asJsonObject
-                        if (mediaJson.has("media")) {
-                            val mediaList = mediaJson.get("media").asJsonArray
-                            val itemType = object : TypeToken<List<MediaList>>() {}.type
-                            mediaResult = Gson().fromJson(mediaList, itemType)
-                        }
-                        _medias.postValue(mediaResult)
-                    } catch (e: Exception) {
-                        LogUtils.e("Error getting media : + ${e.message}")
-                    }
+                    _medias.postValue(mediaResult)
+                } catch (e: Exception) {
+                    LogUtils.e("Error getting media : + ${e.message}")
                 }
             }
         }

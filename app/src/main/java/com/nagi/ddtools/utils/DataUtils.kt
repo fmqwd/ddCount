@@ -1,5 +1,10 @@
 package com.nagi.ddtools.utils
 
+import android.content.Context
+import android.net.Uri
+import android.widget.ArrayAdapter
+import com.nagi.ddtools.data.Resource
+import com.nagi.ddtools.resourceGet.NetGet
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -84,7 +89,7 @@ object DataUtils {
     fun getGroupTime(timeTable: String): MutableList<String> =
         timeTable.split("-").toMutableList().apply {
             if (size > 2) {
-                if (this[1] == "EMPTY" || this[1].isEmpty()) {
+                if (this[1] == "EMPTY" || this[1].isEmpty() || this[1] == "00:00:00") {
                     removeAt(1)
                     removeAt(1)
                 } else {
@@ -125,6 +130,17 @@ object DataUtils {
         return pattern.replace(time, "")
     }
 
+    fun getSex(sex: String?): String {
+        return when (sex) {
+            "男" -> "male"
+            "女" -> "female"
+            "female" -> "女"
+            "male" -> "男"
+            null -> "-"
+            else -> sex
+        }
+    }
+
     /**
      * 将字节数组转换为十六进制字符串
      * @param hash 字节数组
@@ -140,5 +156,30 @@ object DataUtils {
             hexString.append(hex)
         }
         return hexString.toString()
+    }
+
+    fun getImgUrl(
+        context: Context,
+        uri: Uri,
+        path: String,
+        callback: (String) -> Unit
+    ) {
+        NetGet.uploadImage(context, uri, path) { resource ->
+            when (resource) {
+                is Resource.Success -> {
+                    callback(resource.data)
+                }
+
+                is Resource.Error -> {
+                    callback("")
+                }
+            }
+        }
+    }
+
+    fun Collection<String>.toSpinnerAdapter(context: Context): ArrayAdapter<String> {
+        return ArrayAdapter(context, android.R.layout.simple_spinner_item, this.toList()).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
     }
 }

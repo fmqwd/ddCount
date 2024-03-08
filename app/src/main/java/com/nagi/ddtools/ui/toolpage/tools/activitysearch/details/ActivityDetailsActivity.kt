@@ -6,25 +6,36 @@ import android.text.InputFilter
 import android.view.Gravity
 import android.view.View
 import androidx.activity.viewModels
+import androidx.appcompat.content.res.AppCompatResources
 import com.google.android.flexbox.FlexDirection
 import com.google.android.flexbox.FlexboxLayoutManager
 import com.google.android.flexbox.JustifyContent
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.nagi.ddtools.R
+import com.nagi.ddtools.data.MediaList
+import com.nagi.ddtools.data.PageState
 import com.nagi.ddtools.data.TagsList
 import com.nagi.ddtools.database.activityList.ActivityList
 import com.nagi.ddtools.database.idolGroupList.IdolGroupList
+import com.nagi.ddtools.database.localCollect.LocalCollect
 import com.nagi.ddtools.databinding.ActivityDetailsActivityBinding
 import com.nagi.ddtools.databinding.DialogSingleInputBinding
+import com.nagi.ddtools.databinding.ListIdolMediaBinding
 import com.nagi.ddtools.ui.adapter.IdolGroupListAdapter
 import com.nagi.ddtools.ui.adapter.TagListAdapter
 import com.nagi.ddtools.ui.base.DdToolsBindingBaseActivity
 import com.nagi.ddtools.ui.minepage.user.login.LoginActivity
+import com.nagi.ddtools.utils.FileUtils.getDrawableForMedia
 import com.nagi.ddtools.utils.MapUtils
 import com.nagi.ddtools.utils.UiUtils.dialog
 import com.nagi.ddtools.utils.UiUtils.openPage
+import com.nagi.ddtools.utils.UiUtils.openUrl
 import com.nagi.ddtools.utils.UiUtils.toast
 
 class ActivityDetailsActivity : DdToolsBindingBaseActivity<ActivityDetailsActivityBinding>() {
     private val viewModel: ActivityDetailsViewModel by viewModels()
+    private var pageState = PageState.VIEW
     private lateinit var groupAdapter: IdolGroupListAdapter
     private var isAdapterInitialized = false
     private var id = 0
@@ -35,7 +46,6 @@ class ActivityDetailsActivity : DdToolsBindingBaseActivity<ActivityDetailsActivi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initView()
-        initViewModel()
     }
 
     override fun onResume() {
@@ -44,10 +54,23 @@ class ActivityDetailsActivity : DdToolsBindingBaseActivity<ActivityDetailsActivi
     }
 
     private fun initView() {
+        id = intent.extras?.getInt("id") ?: 0
+        pageState = if (intent.extras?.getString("pageType").isNullOrEmpty())
+            PageState.VIEW else PageState.PREVIEW
         binding.apply {
             titleInclude.apply {
                 titleBack.setOnClickListener { finish() }
                 titleText.text = "活动详情"
+                titleRight.text = "编辑"
+                titleRight.visibility = View.VISIBLE
+                titleRight.setOnClickListener {
+                    openPage(
+                        this@ActivityDetailsActivity,
+                        EditActivityActivity::class.java,
+                        false,
+                        Bundle().apply { putInt("id", id) }
+                    )
+                }
             }
             detailsEvaluate.text = "评价"
             val layoutManager = FlexboxLayoutManager(applicationContext).apply {
@@ -55,12 +78,14 @@ class ActivityDetailsActivity : DdToolsBindingBaseActivity<ActivityDetailsActivi
                 justifyContent = JustifyContent.FLEX_START
             }
             detailsEvaluateList.layoutManager = layoutManager
+            detailsCollect.setOnClickListener { viewModel.setCollect(createCollectData()) }
         }
         initGroupAdapter()
+        if (pageState == PageState.VIEW) initViewModel()
+        else initFromData()
     }
 
     private fun initViewModel() {
-        id = intent.extras?.getInt("id") ?: 0
         viewModel.getUser()
         viewModel.setId(id)
         viewModel.getTags("activity", id.toString())
@@ -68,18 +93,45 @@ class ActivityDetailsActivity : DdToolsBindingBaseActivity<ActivityDetailsActivi
         viewModel.data.observe(this) {
             updateView(it)
         }
-        viewModel.groupList.observe(this) { data ->
-            upGroupAdapter(data)
+        viewModel.isCollection.observe(this) {
+            updateCollection(it)
         }
         viewModel.tags.observe(this) { data ->
             updateTagAdapter(data)
         }
+        viewModel.groupList.observe(this) { data ->
+            upGroupAdapter(data)
+        }
+    }
+
+    private fun initFromData() {
+        val dataJson = intent.extras?.getString("data")
+        val data = Gson().fromJson(dataJson, ActivityList::class.java)
+        binding.apply {
+            detailsTitle.text = data.name
+            detailsDateText.text = data.durationDate
+            detailsLocationText.text = data.location
+            detailsTimeText.text = data.durationTime
+            detailsPriceText.text = data.price
+            detailsCollect.visibility = View.GONE
+            detailsEvaluate.visibility = View.GONE
+            detailsEvaluateList.visibility = View.GONE
+            detailsEvaluateInclude.visibility = View.GONE
+            if (!data.biliUrl.isNullOrEmpty()) {
+                detailsVideoLink.visibility = View.VISIBLE
+                addMediaLayout(data.biliUrl)
+            }
+            if (data.infoDesc.isNotEmpty()) detailsDescText.text = data.infoDesc
+        }
+        viewModel.setGroupList(data.participatingGroup)
+        viewModel.groupList.observe(this@ActivityDetailsActivity) { groupAdapter.updateData(it) }
     }
 
     private fun initGroupAdapter() {
         if (!isAdapterInitialized) {
             groupAdapter = IdolGroupListAdapter(mutableListOf())
         }
+        groupAdapter.isShowTimeTable = true
         binding.detailsGroupList.adapter = groupAdapter
         isAdapterInitialized = true
     }
@@ -90,22 +142,48 @@ class ActivityDetailsActivity : DdToolsBindingBaseActivity<ActivityDetailsActivi
             detailsVideoLink.visibility = View.GONE
             detailsDateText.text = data.durationDate
             detailsTimeText.text = data.durationTime
+            detailsPriceText.text = data.price
             detailsLocationText.apply {
                 text = data.locationDesc
                 setOnClickListener { MapUtils.chooseLocation(context, data.locationDesc) }
             }
-            if (data.biliUrl?.isNotEmpty() == true) {
+            if (!data.biliUrl.isNullOrEmpty()) {
                 detailsVideoLink.visibility = View.VISIBLE
+                addMediaLayout(data.biliUrl)
             }
+            if (data.infoDesc.isNotEmpty()) detailsDescText.text = data.infoDesc
         }
     }
 
-    private fun updateTagAdapter(data: List<TagsList>) {
-        if (data.isNotEmpty()) {
-            showTagsList(data)
-        } else {
-            hideTagsListAndPromptUserToAddTag()
+    private fun addMediaLayout(biliUrl: String) {
+        val mediaResult: MutableList<MediaList>
+        val itemType = object : TypeToken<List<MediaList>>() {}.type
+        mediaResult = Gson().fromJson(biliUrl, itemType)
+        for (media in mediaResult) {
+            val mediaBody = ListIdolMediaBinding.inflate(layoutInflater)
+            mediaBody.mediaName.text = media.name
+            mediaBody.root.setOnClickListener { openUrl(media.url) }
+            mediaBody.mediaIcon.setImageDrawable(
+                getDrawableForMedia(mediaBody.root.context, media.type)
+            )
+            binding.detailsVideoLinkLayout.addView(mediaBody.root)
         }
+    }
+
+    private fun updateCollection(data: Boolean) {
+        binding.detailsCollect.visibility = View.VISIBLE
+        binding.detailsCollect.setImageDrawable(
+            AppCompatResources.getDrawable(
+                applicationContext,
+                if (data) R.drawable.baseline_collect else R.drawable.baseline_un_collect
+            )
+        )
+    }
+
+    private fun updateTagAdapter(data: List<TagsList>) {
+        if (data.isNotEmpty()) showTagsList(data)
+        else hideTagsListAndPromptUserToAddTag()
+
     }
 
     private fun showTagsList(data: List<TagsList>) {
@@ -130,22 +208,23 @@ class ActivityDetailsActivity : DdToolsBindingBaseActivity<ActivityDetailsActivi
                 if (currentTime - lastClickTime >= 2000) {
                     lastClickTime = currentTime
                     viewModel.addTags("activity", id, tag.content, "like_tag", tag.id) {
-                        toastBack(it)
+                        toastBack(
+                            it
+                        )
                     }
-                } else {
-                    toast("每2秒只能点一次，请不要频繁点击")
-                }
+                } else toast("每2秒只能点一次，请不要频繁点击")
             }
         })
 
-
     private fun checkUserLoginAndPrompt() {
-        if (viewModel.users.value == null) {
-            promptUserToLogin()
-        } else {
-            showAddTagDialog()
-        }
+        if (viewModel.users.value == null) promptUserToLogin() else showAddTagDialog()
     }
+
+    private fun createCollectData() = LocalCollect(
+        collectId = id,
+        collectType = "activity",
+        userId = viewModel.users.value?.id ?: 0
+    )
 
     private fun showAddTagDialog() {
         val editBinding = DialogSingleInputBinding.inflate(layoutInflater)
